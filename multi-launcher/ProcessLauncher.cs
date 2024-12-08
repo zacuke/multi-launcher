@@ -1,8 +1,18 @@
 using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 namespace multi_launcher;
-static class launch_shell
+static class ProcessLauncher
 {
+    //[DllImport("kernel32.dll", SetLastError = true)]
+    //private static extern bool GenerateConsoleCtrlEvent(uint dwCtrlEvent, uint dwProcessGroupId);
+
+    //[DllImport("libc")]
+    //private static extern int kill(int pid, int sig);
+
+
+    //private const int SIGINT = 2;
+
     /// <summary>
     /// Launches arbitrary shell command
     /// </summary>
@@ -10,44 +20,56 @@ static class launch_shell
     /// <param name="processFileName"></param>
     /// <param name="processArguments"></param>
     /// <param name="processWorkingDirectory"></param>
-    public static void execute_launch_shell(string name, 
+    public static void ExecuteLaunchProcess(string name, 
         string processFileName, 
         string processArguments, 
         string processWorkingDirectory,
         CancellationToken cancellationToken)
     {
 
-        ProcessStartInfo pythonProcessStartInfo = new ()
-        {
-            FileName = processFileName,  // Specify the command to run
-            Arguments = processArguments, // Pass in the arguments
-            WorkingDirectory = processWorkingDirectory, //Path.Combine(Directory.GetCurrentDirectory(), ".."), // Set the working directory
-            RedirectStandardOutput = true,               // Optionally read output
-            RedirectStandardError = true,                // Optionally read errors
-            UseShellExecute = false,                     // Required for redirection
-            CreateNoWindow = true                        // Don't create a visible console
-        };
+        //ProcessStartInfo pythonProcessStartInfo = new ()
+        //{
+        //    FileName = processFileName,  // Specify the command to run
+        //    Arguments = processArguments, // Pass in the arguments
+        //    WorkingDirectory = processWorkingDirectory, //Path.Combine(Directory.GetCurrentDirectory(), ".."), // Set the working directory
+        //    RedirectStandardOutput = true,               // Optionally read output
+        //    RedirectStandardError = true,                // Optionally read errors
+        //    UseShellExecute = false,                     // Required for redirection
+        //    CreateNoWindow = true                        // Don't create a visible console
+        //};
+
+        ConsoleAppManager appManager = new ConsoleAppManager(processFileName, processWorkingDirectory);
+        //string[] args = new string[] { "args here" };
+        appManager.ExecuteAsync(processArguments);
+        //await Task.Delay(Convert.ToInt32(duration.TotalSeconds * 1000) + 20000);
+
+        //if (appManager.Running)
+        //{
+        //    // If stilll running, send CTRL-C
+        //    appManager.Write("\x3");
+        //}
+
 
         try
         {
             Console.WriteLine($"Starting {name} process...");
 
-            var process = Process.Start(pythonProcessStartInfo) 
-                ?? throw new Exception("Unable to retrieve process handle");
+            //var process = Process.Start(pythonProcessStartInfo) 
+            //    ?? throw new Exception("Unable to retrieve process handle");
 
-            process.OutputDataReceived += (sender, e) =>
-            {
-                if (e.Data != null)
-                    Console.WriteLine($"[{name}] {e.Data}");
-            };
-            process.ErrorDataReceived += (sender, e) =>
-            {
-                if (e.Data != null)
-                    Console.Error.WriteLine($"[{name} - Error] {e.Data}");
-            };
+            //process.OutputDataReceived += (sender, e) =>
+            //{
+            //    if (e.Data != null)
+            //        Console.WriteLine($"[{name}] {e.Data}");
+            //};
+            //process.ErrorDataReceived += (sender, e) =>
+            //{
+            //    if (e.Data != null)
+            //        Console.Error.WriteLine($"[{name} - Error] {e.Data}");
+            //};
 
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
+            //process.BeginOutputReadLine();
+            //process.BeginErrorReadLine();
 
             // Start a non-blocking task to monitor cancellation and process lifetime
             Task.Run(async () =>
@@ -106,7 +128,20 @@ static class launch_shell
                 {
                     if (!process.HasExited)
                     {
-                        process.Kill(); // Terminate the process
+                        //process.Kill(); // Terminate the process
+
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                        {
+                            // Send Ctrl+C on Windows
+                            //GenerateConsoleCtrlEvent(0, (uint)process.Id);
+                            process.write
+                        }
+                        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                        {
+                            // Send SIGINT on Linux/macOS
+                            kill(process.Id, SIGINT);
+                        }
+
                         Console.WriteLine($"Process {process.ProcessName} terminated due to cancellation.");
                     }
                 }

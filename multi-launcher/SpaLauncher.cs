@@ -15,11 +15,14 @@ class SpaLauncher : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
 
-        var builder = WebApplication.CreateBuilder(); //(args);
+        var builder = WebApplication.CreateBuilder(); 
+
+        //override built-in ctrl-c handling
+        builder.Services.AddSingleton<IHostLifetime, NoopConsoleLifetime>();
 
         var app = builder.Build();
 
-        app.Urls.Add(_bindUrl);// ("http://0.0.0.0:3000");
+        app.Urls.Add(_bindUrl);
 
         //serve assets
         app.UseStaticFiles(new StaticFileOptions
