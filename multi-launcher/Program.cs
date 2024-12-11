@@ -6,34 +6,25 @@ namespace multi_launcher
 {
     class Program
     {
-
-        readonly static ConsoleEventDelegate closeHandler = new (CloseHandler);
+ 
         readonly static List<Process> processList = [];
         readonly static CancellationTokenSource cts = new();
+        readonly static IPlatform platform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+           ? new WindowsImpl(CloseHandler)
+           : new LinuxImpl();
 
-        delegate bool ConsoleEventDelegate(int eventType);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        static extern bool SetConsoleCtrlHandler(ConsoleEventDelegate callback, bool add);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool GenerateConsoleCtrlEvent(uint dwCtrlEvent, uint dwProcessGroupId);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool AttachConsole(uint dwProcessId);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool FreeConsole();
 
         static async Task Main(string[] args)
         {
+
             if (args.Length == 0)
             {
                 //setup handler for when app closes
-                SetConsoleCtrlHandler(closeHandler, true);
+                platform.SetConsoleCtrlHandler();
 
                 //setup handler for when ctrl-c is pressed
-                Console.CancelKeyPress += new ConsoleCancelEventHandler(CancelHandler);
+                platform.HandleCtrlC(KillAllProcesses, cts);
+
 
                 var hostBuilder = Host.CreateDefaultBuilder(args)
                     .ConfigureServices(services =>
@@ -46,7 +37,10 @@ namespace multi_launcher
 
                     });
 
-                var soadFolder = "c:\\src\\soad";
+                var soadFolder = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                    ? "c:\\src\\soad"
+                    : "$HOME/src/soad";
+
                 processList.Add(ProcessLauncher.ExecuteLaunchProcess("soad API",
                     //"C:\\Users\\garth\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
                     //"main.py --mode api",
@@ -63,9 +57,7 @@ namespace multi_launcher
             {
                 //https://stackoverflow.com/a/29274238/3594197
                 var id = (uint)int.Parse(args[0]);
-                FreeConsole();
-                AttachConsole(id);
-                GenerateConsoleCtrlEvent(0, 0);
+                platform.GenerateCtrlCEvent(id);
             }
         }
 
@@ -95,7 +87,7 @@ namespace multi_launcher
             //send ctrl-c first
             foreach (var process in processList)
             {
-                var childProcesses = process.GetChildProcesses();
+                var childProcesses = platform.GetChildProcesses(process);
                 foreach (var i in childProcesses)
                 {
                     Process.Start(currPath, i.Id.ToString());
@@ -109,7 +101,7 @@ namespace multi_launcher
             //then kill any left
             foreach (var process in processList)
             {
-                var childProcesses = process.GetChildProcesses();
+                var childProcesses = platform.GetChildProcesses(process);
                 foreach (var i in childProcesses)
                 {
                     i.Kill();
