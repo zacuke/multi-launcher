@@ -1,12 +1,6 @@
 ﻿namespace multi_launcher;
-public class NoopConsoleLifetime : IHostLifetime, IDisposable
+public class DisableCtrlCLifeTime() : IHostLifetime, IDisposable
 {
-    private readonly ILogger<NoopConsoleLifetime> _logger;
-
-    public NoopConsoleLifetime(ILogger<NoopConsoleLifetime> logger)
-    {
-        _logger = logger;
-    }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
@@ -21,7 +15,6 @@ public class NoopConsoleLifetime : IHostLifetime, IDisposable
 
     private void OnCancelKeyPressed(object? sender, ConsoleCancelEventArgs e)
     {
-        //_logger.LogInformation("Ctrl+C has been pressed, ignoring.");
         e.Cancel = true;
     }
 

@@ -15,10 +15,9 @@ class SpaLauncher : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
 
-        var builder = WebApplication.CreateBuilder(); 
+        var builder = WebApplication.CreateSlimBuilder(); 
 
-        //override built-in ctrl-c handling
-        builder.Services.AddSingleton<IHostLifetime, NoopConsoleLifetime>();
+        builder.Services.AddSingleton<IHostLifetime, DisableCtrlCLifeTime>();
 
         var app = builder.Build();
 
@@ -29,7 +28,6 @@ class SpaLauncher : BackgroundService
         {
             FileProvider = new PhysicalFileProvider(_spaPath),
             RequestPath = string.Empty,
-
         });
 
         //maps everything to index.html

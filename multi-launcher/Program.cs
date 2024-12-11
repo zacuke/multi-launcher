@@ -1,76 +1,83 @@
-﻿namespace multi_launcher
+﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
+
+namespace multi_launcher
 {
     class Program
     {
 
+        readonly static ConsoleEventDelegate closeHandler = new (CloseHandler);
+        readonly static List<Process> processList = [];
+        readonly static CancellationTokenSource cts = new();
+
+        delegate bool ConsoleEventDelegate(int eventType);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool SetConsoleCtrlHandler(ConsoleEventDelegate callback, bool add);
 
         static async Task Main(string[] args)
-        {
-            using var cts = new CancellationTokenSource();
+        {            
+ 
+            //setup handler for when app closes
+            SetConsoleCtrlHandler(closeHandler, true);
 
-            // Handle the Ctrl+C behavior directly
-            Console.CancelKeyPress += async (sender, e) =>
-            {
-                Console.WriteLine("Ctrl+C has been pressed, stopping...");
-                e.Cancel = true; // Prevents application termination.
-                await cts.CancelAsync();
-                //Environment.Exit(0);
-            };
+            //setup handler for when ctrl-c is pressed
+            Console.CancelKeyPress += new ConsoleCancelEventHandler(CancelHandler);
 
             var hostBuilder = Host.CreateDefaultBuilder(args)
                 .ConfigureServices(services =>
                 {
-                    // Add your DI services here if needed
                     var spaPath = Path.GetFullPath(Path.Combine("..", "..", "soad", "trading-dashboard", "build"));
                     string bindUrl = "http://0.0.0.0:3000";
                     services.AddSingleton<IHostedService>(sp => new SpaLauncher(spaPath, bindUrl));
-                    services.AddSingleton<IHostLifetime, NoopConsoleLifetime>();
+                    services.AddSingleton<IHostLifetime, DisableCtrlCLifeTime>();
 
 
-                });//.UseConsoleLifetime(options => options.SuppressStatusMessages = true); ;
+                });
 
-            // Create and start the host
+            var soadFolder = "c:\\src\\soad";
+            processList.Add(ProcessLauncher.ExecuteLaunchProcess("soad API",
+                //"C:\\Users\\garth\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+                //"main.py --mode api",
+                "cmd",
+                "/c python main.py --mode api",
+                Path.GetFullPath(soadFolder),
+                cts.Token));
+
             var host = hostBuilder.Build();
             var hostTask = host.RunAsync(cts.Token);
-
-            await run_application(args, cts.Token);
-
             await hostTask;
         }
 
-        static async Task run_application(string[] args, CancellationToken cancellationToken)
+        static bool CloseHandler(int eventType)
         {
-
-            var soadFolder = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..","..", "soad"));
-
-            ProcessLauncher.ExecuteLaunchProcess("soad API",
-                "C:\\Users\\garth\\.pyenv\\pyenv-win\\versions\\3.11.9\\python.exe",
-                "main.py --mode api",
-                Path.GetFullPath(soadFolder),
-                cancellationToken);
-
-            try
+            //windows gives you 5 seconds
+            if (eventType == 2)
             {
-                await WaitForShutdownAsync(cancellationToken);
+                KillAllProcesses();
             }
-            catch (OperationCanceledException)
-            {
-                Console.WriteLine("Shutdown signal received. Cleaning up...");
-            }
-
-            Console.WriteLine("Application exiting.");
-
+            return false;
         }
 
-        static async Task WaitForShutdownAsync(CancellationToken token)
+        static void CancelHandler(object? sender, ConsoleCancelEventArgs args)
         {
-            var tcs = new TaskCompletionSource<bool>();
-            using (token.Register(() => tcs.TrySetResult(true)))
-            {
-                await tcs.Task; 
-            }
+            KillAllProcesses();
+            cts.Cancel();
+            args.Cancel = true;
         }
 
+        static void KillAllProcesses()
+        {
+            foreach (var process in processList)
+            {
+                var childProcesses = process.GetChildProcesses();
+                foreach (var i in childProcesses)
+                {
+                    i.Kill();
+                }
+                process.Kill();
+            }
+        }
     }
 }
 
