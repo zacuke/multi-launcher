@@ -39,13 +39,13 @@ namespace multi_launcher
 
                 var soadFolder = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
                     ? "c:\\src\\soad"
-                    : "$HOME/src/soad";
+                    : "/home/lyle/src/soad";
 
                 processList.Add(ProcessLauncher.ExecuteLaunchProcess("soad API",
                     //"C:\\Users\\garth\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
                     //"main.py --mode api",
-                    "cmd",
-                    "/c python main.py --mode api",
+                    RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "cmd" : "bash",
+                    RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "/c python main.py --mode api" : "python main.py --mode api",
                     Path.GetFullPath(soadFolder),
                     cts.Token));
 
@@ -80,34 +80,34 @@ namespace multi_launcher
 
         static void KillAllProcesses()
         {
+            platform.KillAllProcesses(processList);
+            // var currPath = Environment.ProcessPath 
+            //     ?? System.Reflection.Assembly.GetExecutingAssembly().Location;
 
-            var currPath = Environment.ProcessPath 
-                ?? System.Reflection.Assembly.GetExecutingAssembly().Location;
+            // //send ctrl-c first
+            // foreach (var process in processList)
+            // {
+            //     var childProcesses = platform.GetChildProcesses(process);
+            //     foreach (var i in childProcesses)
+            //     {
+            //         Process.Start(currPath, i.Id.ToString());
 
-            //send ctrl-c first
-            foreach (var process in processList)
-            {
-                var childProcesses = platform.GetChildProcesses(process);
-                foreach (var i in childProcesses)
-                {
-                    Process.Start(currPath, i.Id.ToString());
+            //     }
+            //     Process.Start(currPath, process.Id.ToString());
+            // }
 
-                }
-                Process.Start(currPath, process.Id.ToString());
-            }
+            // Thread.Sleep(4);
 
-            Thread.Sleep(4);
-
-            //then kill any left
-            foreach (var process in processList)
-            {
-                var childProcesses = platform.GetChildProcesses(process);
-                foreach (var i in childProcesses)
-                {
-                    i.Kill();
-                }
-                process.Kill();
-            }
+            // //then kill any left
+            // foreach (var process in processList)
+            // {
+            //     var childProcesses = platform.GetChildProcesses(process);
+            //     foreach (var i in childProcesses)
+            //     {
+            //         i.Kill();
+            //     }
+            //     process.Kill();
+            // }
         }
 
     }

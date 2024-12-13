@@ -1,8 +1,16 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace multi_launcher;
 public class LinuxImpl : IPlatform
 {
+    [DllImport("libc")]
+    private static extern int kill(int pid, int sig);
+
+    // Import the `strerror` function from libc to handle errors
+    [DllImport("libc")]
+    private static extern IntPtr strerror(int errnum);
+
     public void SetConsoleCtrlHandler()
     {
         // Linux does not use SetConsoleCtrlHandler
@@ -78,5 +86,64 @@ public class LinuxImpl : IPlatform
         }
 
         return childProcesses;
+    }
+
+    // Constants for signals
+    private const int SIGINT = 2;  // Interrupt signal (Ctrl+C equivalent)
+    private const int SIGTERM = 15; // Termination signal
+
+    public void KillAllProcesses(List<Process> processList)
+    {
+        // Step 1: Send SIGINT (graceful termination, equivalent to Ctrl+C)
+        foreach (var process in processList)
+        {
+            // Send SIGINT to child processes first
+            var childProcesses = GetChildProcesses(process);
+            foreach (var childProcess in childProcesses)
+            {
+                SendSignal(childProcess.Id, SIGINT);
+            }
+
+            // Send SIGINT to the parent process
+            SendSignal(process.Id, SIGINT);
+        }
+
+        // Allow time for the processes to terminate gracefully
+        Thread.Sleep(4000); // Sleep for 4 seconds
+
+        // Step 2: Send SIGTERM (force termination if SIGINT didn’t work)
+        foreach (var process in processList)
+        {
+            // Send SIGTERM to child processes first
+            var childProcesses = GetChildProcesses(process);
+            foreach (var childProcess in childProcesses)
+            {
+                SendSignal(childProcess.Id, SIGTERM);
+            }
+
+            // Send SIGTERM to the parent process
+            SendSignal(process.Id, SIGTERM);
+        }
+    }
+
+    private void SendSignal(int pid, int signal)
+    {
+        int result = kill(pid, signal);
+        if (result != 0) // If `kill` returns -1, an error occurred
+        {
+            var errno = Marshal.GetLastPInvokeError();
+            string errorMessage = GetStrError(errno);
+            Console.WriteLine($"Failed to send signal {signal} to process {pid}. Error: {errorMessage}");
+        }
+        else
+        {
+            Console.WriteLine($"Signal {signal} sent to process {pid}.");
+        }
+    }
+
+    private string GetStrError(int errnum)
+    {
+        IntPtr errorMessagePtr = strerror(errnum); // Get the error message string
+        return Marshal.PtrToStringAnsi(errorMessagePtr) ?? $"Unknown error ({errnum})";
     }
 }

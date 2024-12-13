@@ -2,7 +2,9 @@
 using System.Diagnostics;
 using System.Management;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
+[SupportedOSPlatform("windows")]
 public class WindowsImpl : IPlatform
 {
     private readonly ConsoleEventDelegate _closeHandler;
@@ -69,4 +71,37 @@ public class WindowsImpl : IPlatform
 
         return childProcesses;
     }
+
+    public void KillAllProcesses(List<Process> processList)
+    {
+
+        var currPath = Environment.ProcessPath 
+            ?? System.Reflection.Assembly.GetExecutingAssembly().Location;
+
+        //send ctrl-c first
+        foreach (var process in processList)
+        {
+            var childProcesses = GetChildProcesses(process);
+            foreach (var i in childProcesses)
+            {
+                Process.Start(currPath, i.Id.ToString());
+
+            }
+            Process.Start(currPath, process.Id.ToString());
+        }
+
+        Thread.Sleep(4);
+
+        //then kill any left
+        foreach (var process in processList)
+        {
+            var childProcesses = GetChildProcesses(process);
+            foreach (var i in childProcesses)
+            {
+                i.Kill();
+            }
+            process.Kill();
+        }
+    }
+
 }
