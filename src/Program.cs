@@ -29,7 +29,10 @@ namespace multi_launcher
                 var hostBuilder = Host.CreateDefaultBuilder(args)
                     .ConfigureServices(services =>
                     {
-                        var spaPath = Path.GetFullPath(Path.Combine("..", "..", "soad", "trading-dashboard", "build"));
+                        var spaPath = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                            ? "c:\\src\\soad\\trading-dashboard"
+                            : "/home/lyle/src/soad/trading-dashboard";
+
                         string bindUrl = "http://0.0.0.0:3000";
                         services.AddSingleton<IHostedService>(sp => new SpaLauncher(spaPath, bindUrl));
                         services.AddSingleton<IHostLifetime, DisableCtrlCLifeTime>();
@@ -81,33 +84,6 @@ namespace multi_launcher
         static void KillAllProcesses()
         {
             platform.KillAllProcesses(processList);
-            // var currPath = Environment.ProcessPath 
-            //     ?? System.Reflection.Assembly.GetExecutingAssembly().Location;
-
-            // //send ctrl-c first
-            // foreach (var process in processList)
-            // {
-            //     var childProcesses = platform.GetChildProcesses(process);
-            //     foreach (var i in childProcesses)
-            //     {
-            //         Process.Start(currPath, i.Id.ToString());
-
-            //     }
-            //     Process.Start(currPath, process.Id.ToString());
-            // }
-
-            // Thread.Sleep(4);
-
-            // //then kill any left
-            // foreach (var process in processList)
-            // {
-            //     var childProcesses = platform.GetChildProcesses(process);
-            //     foreach (var i in childProcesses)
-            //     {
-            //         i.Kill();
-            //     }
-            //     process.Kill();
-            // }
         }
 
     }
