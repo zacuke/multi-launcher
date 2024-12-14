@@ -1,4 +1,6 @@
-﻿namespace multi_launcher;
+﻿using Microsoft.Extensions.Hosting;
+
+namespace multi_launcher;
 public class DisableCtrlCLifeTime() : IHostLifetime, IDisposable
 {
 
