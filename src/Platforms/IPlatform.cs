@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace multi_launcher;
+namespace multi_launcher.Platforms;
 public interface IPlatform
 {
     void SetConsoleCtrlHandler();
@@ -8,4 +8,5 @@ public interface IPlatform
     void GenerateCtrlCEvent(uint processId);
     void KillAllProcesses(List<Process> processList);
     IList<Process> GetChildProcesses(Process process);
+    bool IsWindows();
 }

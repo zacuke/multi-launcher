@@ -1,6 +1,8 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using System;
+using multi_launcher.Launchers;
+using multi_launcher.Platforms;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
@@ -8,12 +10,12 @@ namespace multi_launcher
 {
     class Program
     {
- 
+
         readonly static List<Process> processList = [];
         readonly static CancellationTokenSource cts = new();
         readonly static IPlatform platform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-           ? new WindowsImpl(CloseHandler)
-           : new LinuxImpl();
+            ? new WindowsImpl(CloseHandler)
+            : new LinuxImpl();
 
 
         static async Task Main(string[] args)
@@ -27,35 +29,66 @@ namespace multi_launcher
                 //setup handler for when ctrl-c is pressed
                 platform.HandleCtrlC(KillAllProcesses, cts);
 
+                var config = new ConfigurationBuilder()
+                    .SetBasePath(Directory.GetCurrentDirectory())
+                    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                    .Build();
+
+                var multiLauncherConfig = new MultiLauncherConfig.MultiLauncher();
+                config.GetSection("MultiLauncher").Bind(multiLauncherConfig);
+
+                if (multiLauncherConfig.Processes.Count == 0 && multiLauncherConfig.SpaApps.Count == 0)
+                {
+                    Console.WriteLine("No processes or spa apps found in config. Exiting.");
+                    Environment.Exit(0);
+                };
+
+                if (multiLauncherConfig.SpaApps.Count == 0)
+                    Console.WriteLine("No spa apps found in config");
+
+                if (multiLauncherConfig.Processes.Count == 0)
+                    Console.WriteLine("No processes found in config");
 
                 var hostBuilder = Host.CreateDefaultBuilder(args)
-                    .ConfigureServices(services =>
+                .ConfigureServices(services =>
+                {
+
+                    foreach (var spaApp in multiLauncherConfig.SpaApps)
                     {
-                        var spaPath = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                            ? "c:\\src\\soad\\trading-dashboard"
-                            : "/home/lyle/src/soad/trading-dashboard";
+                        var spaPath = platform.IsWindows() ? spaApp.WindowsPath : spaApp.LinuxPath;
+                        services.AddSingleton<IHostedService>(sp => new SpaLauncher(
+                            spaPath, 
+                            spaApp.BindUrls, 
+                            spaApp.SpaResponseContentType, 
+                            spaApp.IndexHtml,
+                            spaApp.SpaResponseHeaders)
+                        );
+                    }
 
-                        string bindUrl = "http://0.0.0.0:3000";
-                        services.AddSingleton<IHostedService>(sp => new SpaLauncher(spaPath, bindUrl));
-                        services.AddSingleton<IHostLifetime, DisableCtrlCLifeTime>();
+                    services.AddSingleton<IHostLifetime, DisableCtrlCLifeTime>();
 
+                });
 
-                    });
+                foreach (var processConfig in multiLauncherConfig.Processes)
+                {
+                    var platformConfig = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                        ? processConfig.Windows
+                        : processConfig.Linux;
 
-                var soadFolder = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                    ? "c:\\src\\soad"
-                    : "/home/lyle/src/soad";
+                    Console.WriteLine($"Launching Process: {processConfig.Name}, Path: {platformConfig.Path}");
 
-                processList.Add(ProcessLauncher.ExecuteLaunchProcess("soad API",
-                    //"C:\\Users\\garth\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-                    //"main.py --mode api",
-                    RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "cmd" : "bash",
-                    RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "/c python main.py --mode api" : "python main.py --mode api",
-                    Path.GetFullPath(soadFolder),
-                    cts.Token));
-
+                    processList.Add(ProcessLauncher.ExecuteLaunchProcess(
+                        processConfig.Name,
+                        platformConfig.Cmd,
+                        platformConfig.Args,
+                        Path.GetFullPath(platformConfig.Path), 
+                        processConfig.ProcessEnvironment));
+                }
+      
                 var host = hostBuilder.Build();
                 var hostTask = host.RunAsync(cts.Token);
+
+                Console.WriteLine("Multi Launcher started. Press Ctrl+C to shut down.");
                 await hostTask;
             }
             else
@@ -87,7 +120,7 @@ namespace multi_launcher
         {
             platform.KillAllProcesses(processList);
         }
-
     }
+
 }
 

@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace multi_launcher;
+namespace multi_launcher.Platforms;
 public class LinuxImpl : IPlatform
 {
     [DllImport("libc")]
@@ -9,7 +9,7 @@ public class LinuxImpl : IPlatform
 
     // Import the `strerror` function from libc to handle errors
     [DllImport("libc")]
-    private static extern IntPtr strerror(int errnum);
+    private static extern nint strerror(int errnum);
 
     public void SetConsoleCtrlHandler()
     {
@@ -143,7 +143,12 @@ public class LinuxImpl : IPlatform
 
     private string GetStrError(int errnum)
     {
-        IntPtr errorMessagePtr = strerror(errnum); // Get the error message string
+        nint errorMessagePtr = strerror(errnum); // Get the error message string
         return Marshal.PtrToStringAnsi(errorMessagePtr) ?? $"Unknown error ({errnum})";
+    }
+
+    public bool IsWindows()
+    {
+        return false;
     }
 }

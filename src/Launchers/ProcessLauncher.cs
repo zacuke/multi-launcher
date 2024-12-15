@@ -1,7 +1,8 @@
 using System;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-namespace multi_launcher;
+namespace multi_launcher.Launchers;
 static class ProcessLauncher
 {
 
@@ -16,7 +17,7 @@ static class ProcessLauncher
         string processFileName,
         string processArguments,
         string processWorkingDirectory,
-        CancellationToken cancellationToken)
+        Dictionary<string,string> processEnvironment)
     {
 
         ProcessStartInfo pythonProcessStartInfo = new()
@@ -27,8 +28,14 @@ static class ProcessLauncher
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
-            CreateNoWindow = true
+            CreateNoWindow = true,
+            
         };
+
+        foreach (var kvp in processEnvironment)
+        {
+            pythonProcessStartInfo.EnvironmentVariables.Add(kvp.Key, kvp.Value);
+        }
 
         var process = Process.Start(pythonProcessStartInfo)
             ?? throw new Exception("Unable to get handle to process");
@@ -48,6 +55,5 @@ static class ProcessLauncher
         process.BeginErrorReadLine();
         return process;
     }
-
-
+ 
 }

@@ -1,4 +1,5 @@
-﻿namespace multi_launcher;
+﻿namespace multi_launcher.Platforms;
+
 using System.Diagnostics;
 using System.Management;
 using System.Runtime.InteropServices;
@@ -75,7 +76,7 @@ public class WindowsImpl : IPlatform
     public void KillAllProcesses(List<Process> processList)
     {
 
-        var currPath = Environment.ProcessPath 
+        var currPath = Environment.ProcessPath
             ?? System.Reflection.Assembly.GetExecutingAssembly().Location;
 
         //send ctrl-c first
@@ -104,4 +105,8 @@ public class WindowsImpl : IPlatform
         }
     }
 
+    public bool IsWindows()
+    {
+        return true;
+    }
 }
