@@ -55,13 +55,16 @@ jobs:
           name: published-app-windows-latest
           path: windows-artifacts
 
+      - name: Set datetime
+        run: echo "::set-env name=NOW::v$(date +'%Y%m%d.%H%M%S')"
+
       # Create a GitHub release (using the Ubuntu and Windows artifacts)
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         with:
-          tag_name: ${{ github.sha }}
-          release_name: Release ${{ github.sha }}
+          tag_name: "${{ env.NOW }}"
+          release_name: Release "${{ env.NOW }}"
           draft: false
           prerelease: false
           body: |
