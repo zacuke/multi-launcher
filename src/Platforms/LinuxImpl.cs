@@ -15,6 +15,20 @@ public class LinuxImpl : IPlatform
     [DllImport("libc")]
     private static extern nint strerror(int errnum);
 
+    [DllImport("libc")]
+    private static extern int setpgid(int pid, int pgid);
+
+    [DllImport("libc")]
+    private static extern int getpgid(int pid);
+
+    [DllImport("libc")]
+    private static extern int killpg(int pgrp, int sig);
+    
+    [DllImport("libc")]
+    private static extern int prctl(int option, int arg2, int arg3, int arg4, int arg5);
+
+    private const int PR_SET_PDEATHSIG = 1;
+    private const int SIGKILL = 9;
     public void MySetConsoleCtrlHandler()
     {
         // Linux does not use SetConsoleCtrlHandler
@@ -98,35 +112,37 @@ public class LinuxImpl : IPlatform
 
     public void KillAllProcesses()
     {
-        // Step 1: Send SIGINT (graceful termination, equivalent to Ctrl+C)
-        foreach (var process in processList)
+        try
         {
-            // Send SIGINT to child processes first
-            var childProcesses = GetChildProcesses(process);
-            foreach (var childProcess in childProcesses)
+            // Step 1: Send SIGINT (graceful termination, equivalent to Ctrl+C)
+            foreach (var process in processList)
             {
-                SendSignal(childProcess.Id, SIGINT);
+                // Send SIGINT to child processes first
+                var childProcesses = GetChildProcesses(process);
+                foreach (var childProcess in childProcesses)
+                {
+                    SendSignal(childProcess.Id, SIGINT);
+                }
+
+                // Send SIGINT to the parent process
+                SendSignal(process.Id, SIGINT);
             }
 
-            // Send SIGINT to the parent process
-            SendSignal(process.Id, SIGINT);
+            // Send a signal to the process group
+            int processGroupId = Environment.ProcessId;
+
+            // Wait for the child processes to exit gracefully within a timeout
+            if (!WaitForProcessesToExit(processGroupId, timeoutMilliseconds: 4000))
+            {
+                Console.WriteLine("Processes did not exit gracefully. Sending SIGTERM...");
+                // Send SIGTERM (or SIGKILL) for forced termination
+                killpg(processGroupId, SIGTERM);
+                Console.WriteLine($"Sent SIGTERM to process group {processGroupId}");
+            }
         }
-
-        // Allow time for the processes to terminate gracefully
-        Thread.Sleep(4000); // Sleep for 4 seconds
-
-        // Step 2: Send SIGTERM (force termination if SIGINT didn’t work)
-        foreach (var process in processList)
+        catch (Exception ex)
         {
-            // Send SIGTERM to child processes first
-            var childProcesses = GetChildProcesses(process);
-            foreach (var childProcess in childProcesses)
-            {
-                SendSignal(childProcess.Id, SIGTERM);
-            }
-
-            // Send SIGTERM to the parent process
-            SendSignal(process.Id, SIGTERM);
+            Console.Error.WriteLine($"Failed to kill process group: {ex.Message}");
         }
     }
 
@@ -157,8 +173,61 @@ public class LinuxImpl : IPlatform
     }
     public void LaunchProcess(string name, string cmd, string args, string path, Dictionary<string, string> env)
     {
-        processList.Add( ProcessLauncher.ExecuteLaunchProcess(name, cmd, args, path, env));
+        var process = ProcessLauncher.ExecuteLaunchProcess(name, cmd, args, path, env);
+       
+        try
+        {
+            // Use the parent's PID as the process group ID
+            setpgid(process.Id, Environment.ProcessId);
+            Console.WriteLine($"Process {process.Id} added to process group {Environment.ProcessId}");
 
+            // Use prctl to ensure the child dies if the parent dies
+            if (prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0) != 0)
+            {
+                throw new Exception("Failed to set PR_SET_PDEATHSIG");
+            }
+            Console.WriteLine($"Set PR_SET_PDEATHSIG for process {process.Id}.");
+
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to configure process {process.Id}: {ex.Message}");
+        }
+
+        processList.Add(process);
     }
+    private bool WaitForProcessesToExit(int processGroupId, int timeoutMilliseconds)
+    {
+        var stopwatch = Stopwatch.StartNew();
 
+        while (stopwatch.ElapsedMilliseconds < timeoutMilliseconds)
+        {
+            // Query currently running child processes in the process group
+            var activeProcesses = Process.GetProcesses()
+                                        .Where(p =>
+                                        {
+                                            try
+                                            {
+                                                return getpgid(p.Id) == processGroupId;
+                                            }
+                                            catch
+                                            {
+                                                return false; // Process may have already exited
+                                            }
+                                        })
+                                        .ToList();
+
+            // If no active processes, return true
+            if (!activeProcesses.Any())
+            {
+                return true;
+            }
+
+            // Introduce a short delay before polling again (lightweight alternative to Thread.Sleep)
+            Thread.Sleep(500);
+        }
+
+        // Timeout occurred
+        return false;
+    }
 }

@@ -9,7 +9,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/src/bin/Debug/net8.0/multi-launcher.dll",
+            "program": "${workspaceFolder}/src/bin/Debug/net9.0/linux-x64/multi-launcher.dll",
             "console": "externalTerminal"
         },
         {
