@@ -1,0 +1,70 @@
+name: Build with dotnet publish on Windows and Linux
+  
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  
+jobs:
+  dotnet-publish:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+  
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+  
+      # Setup .NET environment
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 9.0
+
+      # Publish the application
+      - name: Publish the application
+        working-directory: src
+        run: dotnet publish --property:PublishDir=publish-output
+
+      # Upload build artifacts
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: published-app-${{ matrix.os }}
+          path: src/publish-output
+
+  create-release:
+    needs: dotnet-publish 
+    runs-on: ubuntu-latest
+    steps:
+      # Download artifacts from the dotnet-publish job for all OSes
+      - name: Download Ubuntu artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: published-app-ubuntu-latest
+          path: ubuntu-artifacts
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: published-app-windows-latest
+          path: windows-artifacts
+          
+      - name: Display structure of downloaded files
+        run: ls -R
+  
+      - name: Set datetime
+        run: echo "NOW=$(date +'%Y%m%d.%H%M%S')" >> $GITHUB_ENV
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "Release_${{ env.NOW }}"
+          files: |
+            ubuntu-artifacts/multi-launcher
+            windows-artifacts/multi-launcher.exe
