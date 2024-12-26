@@ -56,7 +56,7 @@ jobs:
           path: windows-artifacts
 
       - name: Set datetime
-        run: echo “NOW=$(date +'%Y.%m.%d')” >> $GITHUB_ENV
+        run: echo "NOW=$(date +'%Y.%m.%d')" >> $GITHUB_ENV
 
       # Create a GitHub release (using the Ubuntu and Windows artifacts)
       - name: Create Release
