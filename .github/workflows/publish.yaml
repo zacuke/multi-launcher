@@ -1,0 +1,35 @@
+name: Build with dotnet publish on Windows and Linux
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  dotnet-publish:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest] # Specify the operating systems
+    runs-on: ${{ matrix.os }} # Runs the job on the OS specified in the matrix
+
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Setup .NET environment
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 9.0 # Replace with the version of .NET you need
+
+      # Install dependencies
+      - name: Install dependencies
+        run: dotnet restore
+
+      # Publish the application
+      - name: Publish the application
+        run: dotnet publish
