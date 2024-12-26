@@ -48,13 +48,16 @@ jobs:
         with:
           name: published-app-ubuntu-latest
           path: ubuntu-artifacts
-        
+
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
           name: published-app-windows-latest
           path: windows-artifacts
-
+          
+      - name: Display structure of downloaded files
+        run: ls -R
+  
       - name: Set datetime
         run: echo "NOW=$(date +'%Y%m%d.%H%M%S')" >> $GITHUB_ENV
 
