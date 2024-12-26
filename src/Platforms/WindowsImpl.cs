@@ -4,31 +4,26 @@ using System.Diagnostics;
 using WmiLight;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using multi_launcher.Launchers;
+
+using static WindowsNativeMethods;
 
 [SupportedOSPlatform("windows")]
 public class WindowsImpl : IPlatform
 {
+    readonly static List<Process> processList = [];
+
+
     private readonly ConsoleEventDelegate _closeHandler;
     public delegate bool ConsoleEventDelegate(int eventType);
 
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool SetConsoleCtrlHandler(ConsoleEventDelegate callback, bool add);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool GenerateConsoleCtrlEvent(uint dwCtrlEvent, uint dwProcessGroupId);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool AttachConsole(uint dwProcessId);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool FreeConsole();
 
     public WindowsImpl(ConsoleEventDelegate closeHandler)
     {
         _closeHandler = closeHandler;
     }
 
-    public void SetConsoleCtrlHandler()
+    public void MySetConsoleCtrlHandler()
     {
         SetConsoleCtrlHandler(_closeHandler, true);
     }
@@ -81,7 +76,7 @@ public class WindowsImpl : IPlatform
         return childProcesses;
     }
 
-    public void KillAllProcesses(List<Process> processList)
+    public void KillAllProcesses()
     {
 
         var currPath = Environment.ProcessPath
@@ -117,4 +112,10 @@ public class WindowsImpl : IPlatform
     {
         return true;
     }
+    public void LaunchProcess(string name, string cmd, string args, string path, Dictionary<string, string> env)
+    {
+        processList.Add(ProcessLauncher.ExecuteLaunchProcess(name, cmd, args, path, env));
+
+    }
+
 }

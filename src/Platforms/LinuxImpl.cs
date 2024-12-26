@@ -1,9 +1,13 @@
-﻿using System.Diagnostics;
+﻿using multi_launcher.Launchers;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace multi_launcher.Platforms;
 public class LinuxImpl : IPlatform
 {
+    readonly static List<Process> processList = [];
+
+
     [DllImport("libc")]
     private static extern int kill(int pid, int sig);
 
@@ -11,7 +15,7 @@ public class LinuxImpl : IPlatform
     [DllImport("libc")]
     private static extern nint strerror(int errnum);
 
-    public void SetConsoleCtrlHandler()
+    public void MySetConsoleCtrlHandler()
     {
         // Linux does not use SetConsoleCtrlHandler
         // Implement Linux-specific cleanup mechanism if needed
@@ -92,7 +96,7 @@ public class LinuxImpl : IPlatform
     private const int SIGINT = 2;  // Interrupt signal (Ctrl+C equivalent)
     private const int SIGTERM = 15; // Termination signal
 
-    public void KillAllProcesses(List<Process> processList)
+    public void KillAllProcesses()
     {
         // Step 1: Send SIGINT (graceful termination, equivalent to Ctrl+C)
         foreach (var process in processList)
@@ -151,4 +155,10 @@ public class LinuxImpl : IPlatform
     {
         return false;
     }
+    public void LaunchProcess(string name, string cmd, string args, string path, Dictionary<string, string> env)
+    {
+        processList.Add( ProcessLauncher.ExecuteLaunchProcess(name, cmd, args, path, env));
+
+    }
+
 }

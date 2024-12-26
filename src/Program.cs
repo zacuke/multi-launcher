@@ -11,12 +11,10 @@ namespace multi_launcher
     class Program
     {
 
-        readonly static List<Process> processList = [];
         readonly static CancellationTokenSource cts = new();
         readonly static IPlatform platform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
             ? new WindowsImpl(CloseHandler)
             : new LinuxImpl();
-
 
         static async Task Main(string[] args)
         {
@@ -24,10 +22,10 @@ namespace multi_launcher
             if (args.Length == 0)
             {
                 //setup handler for when app closes
-                platform.SetConsoleCtrlHandler();
+                platform.MySetConsoleCtrlHandler();
 
                 //setup handler for when ctrl-c is pressed
-                platform.HandleCtrlC(KillAllProcesses, cts);
+                platform.HandleCtrlC(platform.KillAllProcesses, cts);
 
                 var config = new ConfigurationBuilder()
                         .SetBasePath(AppContext.BaseDirectory)
@@ -77,12 +75,12 @@ namespace multi_launcher
 
                     Console.WriteLine($"Launching Process: {processConfig.Name}, Path: {platformConfig.Path}");
 
-                    processList.Add(ProcessLauncher.ExecuteLaunchProcess(
-                        processConfig.Name,
-                        platformConfig.Cmd,
-                        platformConfig.Args,
-                        Path.GetFullPath(platformConfig.Path), 
-                        processConfig.ProcessEnvironment));
+                    platform.LaunchProcess(
+                         processConfig.Name,
+                         platformConfig.Cmd,
+                         platformConfig.Args,
+                         Path.GetFullPath(platformConfig.Path),
+                         processConfig.ProcessEnvironment);
                 }
       
                 var host = hostBuilder.Build();
@@ -104,22 +102,18 @@ namespace multi_launcher
             //windows gives you 5 seconds
             if (eventType == 2)
             {
-                KillAllProcesses();
+                platform.KillAllProcesses();
             }
             return false;
         }
 
         static void CancelHandler(object? sender, ConsoleCancelEventArgs args)
         {
-            KillAllProcesses();
+            platform.KillAllProcesses();
             cts.Cancel();
             args.Cancel = true;
         }
 
-        static void KillAllProcesses()
-        {
-            platform.KillAllProcesses(processList);
-        }
     }
 
 }
