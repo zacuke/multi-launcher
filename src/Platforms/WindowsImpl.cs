@@ -1,7 +1,7 @@
 ﻿namespace multi_launcher.Platforms;
 
 using System.Diagnostics;
-using System.Management;
+using WmiLight;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
@@ -54,11 +54,19 @@ public class WindowsImpl : IPlatform
     {
         var childProcesses = new List<Process>();
 
+        ////  System.Management Doesn't Support Trimming Yet
+        ////  https://github.com/dotnet/runtime/issues/61960
+
         // Use ManagementObjectSearcher to find immediate child processes
-        var result = new ManagementObjectSearcher(
-            $"Select * From Win32_Process Where ParentProcessID={process.Id}")
-            .Get()
-            .Cast<ManagementObject>();
+        //var result = new ManagementObjectSearcher(
+        //    $"Select * From Win32_Process Where ParentProcessID={process.Id}")
+        //    .Get()
+        //    .Cast<ManagementObject>();
+
+        //use wmilight instead
+        using WmiConnection con = new () ;
+        var result = con.CreateQuery($"SELECT * FROM Win32_Process Where ParentProcessID={process.Id}");
+
 
         // For each immediate child process, retrieve the process and add to the list
         foreach (var mo in result)
@@ -77,7 +85,7 @@ public class WindowsImpl : IPlatform
     {
 
         var currPath = Environment.ProcessPath
-            ?? System.Reflection.Assembly.GetExecutingAssembly().Location;
+            ?? AppContext.BaseDirectory;
 
         //send ctrl-c first
         foreach (var process in processList)

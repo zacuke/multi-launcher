@@ -30,9 +30,9 @@ namespace multi_launcher
                 platform.HandleCtrlC(KillAllProcesses, cts);
 
                 var config = new ConfigurationBuilder()
-                    .SetBasePath(Directory.GetCurrentDirectory())
-                    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                    .Build();
+                        .SetBasePath(AppContext.BaseDirectory)
+                        .AddJsonFile("appsettings.json", false)
+                        .Build();
 
                 var multiLauncherConfig = new MultiLauncherConfig.MultiLauncher();
                 config.GetSection("MultiLauncher").Bind(multiLauncherConfig);
