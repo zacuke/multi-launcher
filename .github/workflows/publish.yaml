@@ -66,5 +66,11 @@ jobs:
         with:
           tag_name: "Release_${{ env.NOW }}"
           files: |
-            ubuntu-artifacts/multi-launcher
+            ubuntu-artifacts/multi-launcher            
             windows-artifacts/multi-launcher.exe
+            ubuntu-artifacts/appsettings.json
+          body: |
+            App binary is self-contained with no any external dependencies other than appsettings.json.
+            - Linux binary: multi-launcher   
+            - Windows binary: multi-launcher.exe
+            - Example configuration: appsettings.json
