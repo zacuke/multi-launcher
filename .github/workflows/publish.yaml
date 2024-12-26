@@ -79,15 +79,15 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ubuntu-artifacts/multi-launcher
-          asset_name: multi-launcher
-          asset_content_type: application/octet-stream
+          asset_path: ubuntu-artifacts/published-app-ubuntu-latest.zip
+          asset_name: linux.zip
+          asset_content_type: application/zip
 
       # Upload Windows artifact to the release
       - name: Upload Windows artifact
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: windows-artifacts/multi-launcher.exe
-          asset_name: multi-launcher.exe
-          asset_content_type: application/octet-stream
+          asset_path: windows-artifacts/published-app-windows-latest.zip
+          asset_name: windows.zip
+          asset_content_type: application/zip
