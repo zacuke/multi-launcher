@@ -28,8 +28,10 @@ jobs:
 
       # Install dependencies
       - name: Install dependencies
+        working-directory: src
         run: dotnet restore
 
       # Publish the application
       - name: Publish the application
+        working-directory: src
         run: dotnet publish
