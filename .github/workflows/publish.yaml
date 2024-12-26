@@ -12,8 +12,8 @@ jobs:
   dotnet-publish:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest] # Specify the operating systems
-    runs-on: ${{ matrix.os }} # Runs the job on the OS specified in the matrix
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
   
     steps:
       # Checkout the repository
@@ -24,26 +24,24 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: 9.0 # Replace with the version of .NET you need
+          dotnet-version: 9.0
 
       # Publish the application
       - name: Publish the application
         working-directory: src
-        run: dotnet publish -o publish-output # Output files to "publish-output" directory
+        run: dotnet publish --property:PublishDir=publish-output
 
       # Upload build artifacts
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: published-app-${{ matrix.os }} # Name of the artifact, differentiating by OS
-          path: src/publish-output # Path where the application was published
+          name: published-app-${{ matrix.os }}
+          path: src/publish-output
 
   create-release:
-    needs: dotnet-publish # Runs after the dotnet-publish job
-    runs-on: ubuntu-latest # Can run this on any OS since it's uploading artifacts
-    
+    needs: dotnet-publish 
+    runs-on: ubuntu-latest
     steps:
-
       # Download artifacts from the dotnet-publish job for all OSes
       - name: Download Ubuntu artifact
         uses: actions/download-artifact@v4
