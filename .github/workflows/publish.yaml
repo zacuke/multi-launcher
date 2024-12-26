@@ -66,5 +66,5 @@ jobs:
         with:
           tag_name: "Release_${{ env.NOW }}"
           files: |
-            ubuntu-artifacts/published-app-ubuntu-latest.zip
-            windows-artifacts/published-app-windows-latest.zip
+            ubuntu-artifacts/multi-launcher
+            windows-artifacts/multi-launcher.exe
