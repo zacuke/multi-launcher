@@ -57,10 +57,11 @@ jobs:
 
       # Create a GitHub release (using the Ubuntu and Windows artifacts)
       - name: Create Release
+        id: create_release
         uses: actions/create-release@v1
         with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
+          tag_name: ${{ github.sha | slice(0, 7) }}
+          release_name: Release ${{ github.sha | slice(0, 7) }}
           draft: false
           prerelease: false
           body: |
@@ -74,7 +75,7 @@ jobs:
       - name: Upload Ubuntu artifact
         uses: actions/upload-release-asset@v1
         with:
-          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ubuntu-artifacts
           asset_name: published-app-ubuntu-latest.zip
           asset_content_type: application/zip
@@ -83,7 +84,7 @@ jobs:
       - name: Upload Windows artifact
         uses: actions/upload-release-asset@v1
         with:
-          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: windows-artifacts
           asset_name: published-app-windows-latest.zip
           asset_content_type: application/zip
