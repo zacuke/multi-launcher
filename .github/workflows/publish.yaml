@@ -60,8 +60,8 @@ jobs:
         id: create_release
         uses: actions/create-release@v1
         with:
-          tag_name: ${{ github.sha | slice(0, 7) }}
-          release_name: Release ${{ github.sha | slice(0, 7) }}
+          tag_name: ${{ github.sha }}
+          release_name: Release ${{ github.sha }}
           draft: false
           prerelease: false
           body: |
