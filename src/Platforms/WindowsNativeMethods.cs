@@ -28,4 +28,12 @@ internal static class WindowsNativeMethods
 
     [DllImport("kernel32.dll", SetLastError = true)]
     public static extern bool AssignProcessToJobObject(IntPtr hJob, IntPtr hProcess);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool QueryInformationJobObject(
+    IntPtr hJob,
+    int JobObjectInformationClass,
+    ref JOBOBJECT_BASIC_ACCOUNTING_INFORMATION lpJobObjectInfo,
+    uint cbJobObjectInfoLength,
+    IntPtr lpReturnLength);
 }

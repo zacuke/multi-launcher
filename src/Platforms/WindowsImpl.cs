@@ -7,6 +7,8 @@ using System.Runtime.Versioning;
 using multi_launcher.Launchers;
 
 using static WindowsNativeMethods;
+using static WindowsJobObjectInfo;
+using multi_launcher.MultiLauncherConfig;
 
 [SupportedOSPlatform("windows")]
 public class WindowsImpl : IPlatform
@@ -17,10 +19,37 @@ public class WindowsImpl : IPlatform
     private readonly ConsoleEventDelegate _closeHandler;
     public delegate bool ConsoleEventDelegate(int eventType);
 
+    private readonly IntPtr _jobHandle; // Job Object Handle
 
     public WindowsImpl(ConsoleEventDelegate closeHandler)
     {
         _closeHandler = closeHandler;
+
+        // Create the Job Object and set the KILL_ON_JOB_CLOSE flag
+        _jobHandle = CreateJobObject(IntPtr.Zero, null);
+        if (_jobHandle == IntPtr.Zero)
+        {
+            throw new InvalidOperationException($"Failed to create Job object. Error Code: {Marshal.GetLastWin32Error()}");
+        }
+
+        // Configure Job Object to kill all processes on closure
+        var extendedInfo = new JOBOBJECT_EXTENDED_LIMIT_INFORMATION
+        {
+            BasicLimitInformation = new JOBOBJECT_BASIC_LIMIT_INFORMATION
+            {
+                LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+            }
+        };
+
+        if (!SetInformationJobObject(
+                _jobHandle,
+                JobObjectExtendedLimitInformation,
+                ref extendedInfo,
+                (uint)Marshal.SizeOf<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>()))
+        {
+            throw new InvalidOperationException($"Failed to set Job object information. Error Code: {Marshal.GetLastWin32Error()}");
+        }
+
     }
 
     public void MySetConsoleCtrlHandler()
@@ -94,18 +123,28 @@ public class WindowsImpl : IPlatform
             Process.Start(currPath, process.Id.ToString());
         }
 
-        Thread.Sleep(4);
-
-        //then kill any left
-        foreach (var process in processList)
+        // Poll the job object to check if all processes have exited
+        while (true)
         {
-            var childProcesses = GetChildProcesses(process);
-            foreach (var i in childProcesses)
+            var basicAccountingInfo = new JOBOBJECT_BASIC_ACCOUNTING_INFORMATION();
+            if (!QueryInformationJobObject(
+                    _jobHandle,
+                    JobObjectBasicAccountingInformation,
+                    ref basicAccountingInfo,
+                    (uint)Marshal.SizeOf<JOBOBJECT_BASIC_ACCOUNTING_INFORMATION>(),
+                    IntPtr.Zero))
             {
-                i.Kill();
+                throw new InvalidOperationException($"Failed to query Job object information. Error Code: {Marshal.GetLastWin32Error()}");
             }
-            process.Kill();
+
+            if (basicAccountingInfo.ActiveProcesses == 0)
+            {
+                break;
+            }
+
+            Thread.Sleep(500); // Polling interval
         }
+
     }
 
     public bool IsWindows()
@@ -114,8 +153,14 @@ public class WindowsImpl : IPlatform
     }
     public void LaunchProcess(string name, string cmd, string args, string path, Dictionary<string, string> env)
     {
-        processList.Add(ProcessLauncher.ExecuteLaunchProcess(name, cmd, args, path, env));
+        var process = ProcessLauncher.ExecuteLaunchProcess(name, cmd, args, path, env);
+        processList.Add(process);
 
+        // Assign the process to the job
+        if (!AssignProcessToJobObject(_jobHandle, process.Handle))
+        {
+            throw new InvalidOperationException($"Failed to assign process {process.Id} to Job object. Error Code: {Marshal.GetLastWin32Error()}");
+        }
     }
 
 }

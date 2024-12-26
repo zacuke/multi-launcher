@@ -32,8 +32,8 @@ namespace multi_launcher
                         .AddJsonFile("appsettings.json", false)
                         .Build();
 
-                var multiLauncherConfig = new MultiLauncherConfig.MultiLauncher();
-                config.GetSection("MultiLauncher").Bind(multiLauncherConfig);
+                var multiLauncherConfig = config.GetSection("MultiLauncher").Get<MultiLauncherConfig.MultiLauncher>()
+                    ?? throw new Exception("Unable to read configuration");
 
                 if (multiLauncherConfig.Processes.Count == 0 && multiLauncherConfig.SpaApps.Count == 0)
                 {

@@ -1,7 +1,7 @@
 ﻿namespace multi_launcher.MultiLauncherConfig;
 
-public class MultiLauncher
+public record MultiLauncher
 {
-    public List<SpaApp> SpaApps { get; set; } = new List<SpaApp>();
-    public List<Process> Processes { get; set; } = new List<Process>();
+    public List<SpaApp> SpaApps { get; set; } = [];
+    public List<MyProcess> Processes { get; set; } = [];
 }

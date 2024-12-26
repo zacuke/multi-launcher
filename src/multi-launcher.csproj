@@ -14,20 +14,25 @@
 		<PublishIISAssets>false</PublishIISAssets>
 		<SelfContained>true</SelfContained>
 		<PublishSingleFile>true</PublishSingleFile>
+		<WarningsAsErrors>Nullable</WarningsAsErrors>
 	</PropertyGroup>
-	 
+  
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
 		<PackageReference Include="WmiLight" Version="6.9.0" />
 	</ItemGroup>
-	 
+  
 	<ItemGroup>
-	  <None Update="appsettings.json">
-	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	  </None>
+   <None Update="appsettings.json">
+     <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+   </None>
 	</ItemGroup>
 	<PropertyGroup Condition="'$(Configuration)'=='Release'">
 		<DebugSymbols>False</DebugSymbols>
 		<DebugType>None</DebugType>
 	</PropertyGroup>
+
+	<Target Name="PostPublish" AfterTargets="Publish">
+		<Delete Files="$(PublishDir)aspnetcorev2_inprocess.dll" />
+	</Target>
 </Project>

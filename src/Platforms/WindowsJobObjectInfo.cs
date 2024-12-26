@@ -6,7 +6,7 @@ namespace multi_launcher.Platforms
     {
         public const int JobObjectExtendedLimitInformation = 9;
         public const uint JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x2000;
-
+        public const int JobObjectBasicAccountingInformation = 1;
         [StructLayout(LayoutKind.Sequential)]
         public struct JOBOBJECT_BASIC_LIMIT_INFORMATION
         {
@@ -41,6 +41,19 @@ namespace multi_launcher.Platforms
             public UIntPtr JobMemoryLimit;
             public UIntPtr PeakProcessMemoryUsed;
             public UIntPtr PeakJobMemoryUsed;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct JOBOBJECT_BASIC_ACCOUNTING_INFORMATION
+        {
+            public ulong TotalUserTime;
+            public ulong TotalKernelTime;
+            public ulong ThisPeriodTotalUserTime;
+            public ulong ThisPeriodTotalKernelTime;
+            public uint TotalPageFaultCount;
+            public uint TotalProcesses;
+            public uint ActiveProcesses;
+            public uint TotalTerminatedProcesses;
         }
     }
 }
