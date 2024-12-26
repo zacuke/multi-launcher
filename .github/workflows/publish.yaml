@@ -37,3 +37,55 @@ jobs:
         with:
           name: published-app-${{ matrix.os }} # Name of the artifact, differentiating by OS
           path: src/publish-output # Path where the application was published
+
+  create-release:
+    needs: dotnet-publish # Runs after the dotnet-publish job
+    runs-on: ubuntu-latest # Can run this on any OS since it's uploading artifacts
+    
+    steps:
+
+      # Download artifacts from the dotnet-publish job for all OSes
+      - name: Download Ubuntu artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: published-app-ubuntu-latest
+          path: ubuntu-artifacts
+        
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: published-app-windows-latest
+          path: windows-artifacts
+
+      # Create a GitHub release (using the Ubuntu and Windows artifacts)
+      - name: Create Release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          body: |
+            This release contains the build artifacts for the following operating systems:
+            - Ubuntu
+            - Windows
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Upload Ubuntu artifact to the release
+      - name: Upload Ubuntu artifact
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: ubuntu-artifacts
+          asset_name: published-app-ubuntu-latest.zip
+          asset_content_type: application/zip
+
+      # Upload Windows artifact to the release
+      - name: Upload Windows artifact
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: windows-artifacts
+          asset_name: published-app-windows-latest.zip
+          asset_content_type: application/zip
